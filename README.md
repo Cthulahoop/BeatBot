@@ -9,8 +9,8 @@ I sourced the components for this project primarily from Adafruit, Jameco and Al
 
 - (1) Arduino Uno
 - (2) Panel Mount 10K potentiometers
-- (2) 1/4" shaft knobs with markers 
-- (1) 9v battery holder
+- (2) 1/4" shaft knobs with markers (Jameco #202287)
+- (1) 9v battery holder (Jameco #216427)
 - (4) 12mm tactile switch buttons
 - (4) 6mm tactile switch buttons
 - (1) Adafruit mini 8x8 LED matrix w/ I2C backpack
