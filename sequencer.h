@@ -2,24 +2,6 @@
  *  logic for the sequencer
  */
 
-//  Song data
-byte pattern[4][32]= {
-  { 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0 },
-  { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-},
-patternReset[4][32]={
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-};
-
-byte bar;
-boolean paused = false;
-
-
 void initSequencer() {
   bar = 0;
 
@@ -31,8 +13,11 @@ void initSequencer() {
 
 }
 
+// stops the sequencer
 void pauseSeq() {
-    paused = true;
+  stickClear();
+  matrixClear();
+  paused = true;
 }
 
 void startSeq() {
@@ -42,10 +27,7 @@ void startSeq() {
 void sequencer() {
 
   if(paused) {
-    // the Bounce lib requires us to manually call update.
-    updateBtns();
-
-    if(btns[SM_L].fallingEdge()) {
+    if(FallBtns&SM_L) {
       paused = false;
     }
   }
@@ -58,11 +40,11 @@ void sequencer() {
     // Buttons & Dials
     //************************************************
 
-    updateBtns();
     updateDials();
 
     // check for pause button
-    if(btns[SM_L].fallingEdge()) {
+    // if(btns[SM_L].fallingEdge()) {
+    if(FallBtns&SM_L) {
       paused = true;
     }
 
@@ -197,4 +179,6 @@ void sequencer() {
     counter++;
 
   }
+
+  clearBtnStates();
 }

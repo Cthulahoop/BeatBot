@@ -38,15 +38,15 @@
     from on-to-off.
 */
 
-#define BIG_L 0
-#define BIG_ML 1
-#define BIG_MR 2
-#define BIG_R 3
+#define BIG_L 1
+#define BIG_ML 2
+#define BIG_MR 4
+#define BIG_R 8
 
-#define SM_L 4
-#define SM_ML 5
-#define SM_MR 6
-#define SM_R 7
+#define SM_L 16
+#define SM_ML 32
+#define SM_MR 64
+#define SM_R 128
 
 unsigned long bTime = 40;
 
@@ -65,6 +65,8 @@ Bounce btns[8] = {
 
 byte BtnStates = 0; // a bitmask that holds the current btn pressed state
 byte NewBtns = 0; // a bitmask that holds the current newly pressed btns
+byte FallBtns = 0; // a bitmask that holds the current falling btns
+byte RiseBtns = 0; // a bitmask that holds the current rising btns
 
 void initBtns() {
   // setup btn read pins
@@ -79,10 +81,8 @@ void initBtns() {
 }
 
 boolean updateBtns() {
-  Serial.println("*");
-  // clear bitmasks
-  NewBtns = 0;
-  BtnStates =0;
+  // clear state bitmask every time (others hold until cleared)
+  BtnStates = 0;
 
   // loop through btns and check for changes
   for(int i=0; i<8; i++) {
@@ -92,8 +92,19 @@ boolean updateBtns() {
     if(btns[i].read() == LOW) {
       bitSet(BtnStates,i);
     }
+    if(btns[i].fallingEdge()) {
+      bitSet(FallBtns,i);
+    }
+    if(btns[i].risingEdge()) {
+      bitSet(RiseBtns,i);
+    }
   }
   // return true if any button state has changed
   return NewBtns>0;
 }
 
+void clearBtnStates() {
+  NewBtns = 0;
+  FallBtns = 0;
+  RiseBtns = 0;
+}

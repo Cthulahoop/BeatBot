@@ -5,13 +5,12 @@ int endScrollPos = 0;
 void initLeds() {
   // start pixelStick
   stick.begin();
-  stick.setBrightness(64);
+  stick.setBrightness(64); // 0 to 255
   stick.show(); // Initialize all pixels to 'off'
-
 
   // start the matrix
   matrix.begin(0x70);
-  matrix.setBrightness(8);
+  matrix.setBrightness(8); // 0 to 15
 
   matrix.setTextSize(1);
   matrix.setTextWrap(false);  // we dont want text to wrap so it scrolls nicely
@@ -39,22 +38,30 @@ void matrixClear() {
   matrix.writeDisplay();
 }
 
-void matrixSetScrollText(String str) {
+void matrixReset() {
+  matrix.clear();
+  matrix.blinkRate(0);
+  matrix.writeDisplay();
+}
+
+void matrixSetScrollText(String str, int pos = 9) {
   scrollTxt = str;
-  scrollPos = 8;
+  scrollPos = pos;
+  matrix.blinkRate(0);
   endScrollPos = scrollTxt.length() * -6;
 }
 
 boolean matrixScrollText() {
   matrix.clear();
+  scrollPos--;
   if(scrollPos > endScrollPos) {
-    matrix.setCursor(scrollPos--,0);
+    matrix.setCursor(scrollPos,0);
     matrix.print(scrollTxt);
     matrix.writeDisplay();
     return false; // are we done scrolling?
   }
   else if(scrollPos == endScrollPos) {
-//    matrixClear();
+    matrixClear();
     return true; // yes, we're done
   }
   else {

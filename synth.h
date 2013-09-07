@@ -9,8 +9,11 @@
 
 /* *************************************************************************
  *
- *   Modified by Ric Ewing for the MakerHaus BeatBot 6000 project
+ *   Modified by Ric Ewing for the MakerHaus BeatBot 6000 project.
+ *   Thanks to DZL for permission to use and distribute.
  *
+ *   v.1.5  20.08.2013
+ *    - added tempo change
  *   v.1.4  18.08.2013
  *    - removed MIDI centric comments
  *    - fixed wave modification methods
@@ -32,24 +35,23 @@
 #include "avr/pgmspace.h"
 #include "tables.h"
 
-#define SET(x,y) (x |=(1<<y))		        					//-Bit set/clear macros
-#define CLR(x,y) (x &= (~(1<<y)))       						// |
-#define CHK(x,y) (x & (1<<y))           						// |
-#define TOG(x,y) (x^=(1<<y))            						//-+
+#define SET(x,y) (x |=(1<<y))		   //-Bit set/clear macros
+#define CLR(x,y) (x &= (~(1<<y)))  // |
+#define CHK(x,y) (x & (1<<y))      // |
+#define TOG(x,y) (x^=(1<<y))       //-+
 
 
 //*********************************************************************
-//	Audio interrupt
+// vars
 //*********************************************************************
 
 unsigned char currentVoice = 1;
-int clock = 40;
-int tempo = 20;
-
+int tempo = 30;                   //-Tempo for the playback
+boolean playing = true;
 
 int OUTPUTPIN = 6;
 volatile unsigned int PCW[4]={
-  0,0,0,0};			  //-Wave phase accumolators
+  0,0,0,0};			                  //-Wave phase accumolators
 volatile unsigned int FTW[4]={
   1000,200,300,400};              //-Wave frequency tuning words
 volatile unsigned char AMP[4]={
@@ -82,117 +84,118 @@ unsigned char synthTick(void)
 }
 
 
-#define FS 24000.0  //-Sample rate
+#define FS 16000.0  //-Sample rate
 
-SIGNAL(TIMER1_COMPA_vect)
-{
-  OCR1A+=2000000/FS;  //-Auto sample rate
+SIGNAL(TIMER1_COMPA_vect) {
+  if(playing) {
+    OCR1A+=2000000/FS;  //-Auto sample rate
 
-  if(divider) {
-    divider--;
-  }
-  else {
-
-    //************************************************
-    // Volume envelope generator
-    //************************************************
-
-    divider=4;
-
-    if(!(EPCW[0]&0x8000)) {
-      AMP[0]=pgm_read_byte(envs[0]+ ((EPCW[0]+=EFTW[0])>>7) );
-      if(EPCW[0]&0x8000)
-        AMP[0]=0;
+    if(divider) {
+      divider--;
     }
     else {
-      AMP[0]=0;
-    }
 
-    if(!(EPCW[1]&0x8000)) {
-      AMP[1]=pgm_read_byte(envs[1]+ ((EPCW[1]+=EFTW[1])>>7) );
-      if(EPCW[1]&0x8000) {
+      //************************************************
+      // Volume envelope generator
+      //************************************************
+
+      divider=4;
+
+      if(!(EPCW[0]&0x8000)) {
+        AMP[0]=pgm_read_byte(envs[0]+ ((EPCW[0]+=EFTW[0])>>7) );
+        if(EPCW[0]&0x8000)
+          AMP[0]=0;
+      }
+      else {
+        AMP[0]=0;
+      }
+
+      if(!(EPCW[1]&0x8000)) {
+        AMP[1]=pgm_read_byte(envs[1]+ ((EPCW[1]+=EFTW[1])>>7) );
+        if(EPCW[1]&0x8000) {
+          AMP[1]=0;
+        }
+      }
+      else {
         AMP[1]=0;
       }
-    }
-    else {
-      AMP[1]=0;
-    }
 
-    if(!(EPCW[2]&0x8000)) {
-      AMP[2]=pgm_read_byte(envs[2]+ ((EPCW[2]+=EFTW[2])>>7) );
-      if(EPCW[2]&0x8000) {
+      if(!(EPCW[2]&0x8000)) {
+        AMP[2]=pgm_read_byte(envs[2]+ ((EPCW[2]+=EFTW[2])>>7) );
+        if(EPCW[2]&0x8000) {
+          AMP[2]=0;
+        }
+      }
+      else {
         AMP[2]=0;
       }
-    }
-    else {
-      AMP[2]=0;
-    }
 
-    if(!(EPCW[3]&0x8000)) {
-      AMP[3]=pgm_read_byte(envs[3]+ ((EPCW[3]+=EFTW[3])>>7) );
-      if(EPCW[3]&0x8000) {
+      if(!(EPCW[3]&0x8000)) {
+        AMP[3]=pgm_read_byte(envs[3]+ ((EPCW[3]+=EFTW[3])>>7) );
+        if(EPCW[3]&0x8000) {
+          AMP[3]=0;
+        }
+      }
+      else {
         AMP[3]=0;
       }
     }
-    else {
-      AMP[3]=0;
-    }
-  }
 
-  //************************************************
-  //  Synthesizer/audio mixer
-  //************************************************
-  OCR0A=127+
-    ((
-    (((signed char)pgm_read_byte(wavs[0]+((PCW[0]+=FTW[0])>>8))*AMP[0])>>8)+
-    (((signed char)pgm_read_byte(wavs[1]+((PCW[1]+=FTW[1])>>8))*AMP[1])>>8)+
-    (((signed char)pgm_read_byte(wavs[2]+((PCW[2]+=FTW[2])>>8))*AMP[2])>>8)+
-    (((signed char)pgm_read_byte(wavs[3]+((PCW[3]+=FTW[3])>>8))*AMP[3])>>8)
-    )>>2);
+    //************************************************
+    //  Synthesizer/audio mixer
+    //************************************************
+    OCR0A=127+
+      ((
+      (((signed char)pgm_read_byte(wavs[0]+((PCW[0]+=FTW[0])>>8))*AMP[0])>>8)+
+      (((signed char)pgm_read_byte(wavs[1]+((PCW[1]+=FTW[1])>>8))*AMP[1])>>8)+
+      (((signed char)pgm_read_byte(wavs[2]+((PCW[2]+=FTW[2])>>8))*AMP[2])>>8)+
+      (((signed char)pgm_read_byte(wavs[3]+((PCW[3]+=FTW[3])>>8))*AMP[3])>>8)
+      )>>2);
 
-  tim++;
-  tim2++;
+    tim++;
+    tim2++;
 
-  //************************************************
-  //  Modulation engine
-  //************************************************
+    //************************************************
+    //  Modulation engine
+    //************************************************
 
-  // if(tim>FS/20) // = tim > 1200
-  if(tim>FS/tempo)
-  {
-    switch(envg)
+    // if(tim>FS/20) // = tim > 1200
+    if(tim>FS/tempo)
     {
-    case 0:
+      switch(envg)
       {
-        FTW[0]=PITCH[0]+(PITCH[0]*(EPCW[0]/(32767.5*128.0  ))*((int)MOD[0]-512));
-        envg++;
-      };
-      break;
-    case 1:
-      {
-        FTW[1]=PITCH[1]+(PITCH[1]*(EPCW[1]/(32767.5*128.0  ))*((int)MOD[1]-512));
-        envg++;
-      };
-      break;
-    case 2:
-      {
-        FTW[2]=PITCH[2]+(PITCH[2]*(EPCW[2]/(32767.5*128.0  ))*((int)MOD[2]-512));
-        envg++;
-      };
-      break;
-    case 3:
-      {
-        FTW[3]=PITCH[3]+(PITCH[3]*(EPCW[3]/(32767.5*128.0  ))*((int)MOD[3]-512));
-        envg++;
-      };
-      break;
-    case 4:
-      {
-        tim=0;
-        envg=0;
-        tick=1;
-      };
-      break;
+      case 0:
+        {
+          FTW[0]=PITCH[0]+(PITCH[0]*(EPCW[0]/(32767.5*128.0  ))*((int)MOD[0]-512));
+          envg++;
+        };
+        break;
+      case 1:
+        {
+          FTW[1]=PITCH[1]+(PITCH[1]*(EPCW[1]/(32767.5*128.0  ))*((int)MOD[1]-512));
+          envg++;
+        };
+        break;
+      case 2:
+        {
+          FTW[2]=PITCH[2]+(PITCH[2]*(EPCW[2]/(32767.5*128.0  ))*((int)MOD[2]-512));
+          envg++;
+        };
+        break;
+      case 3:
+        {
+          FTW[3]=PITCH[3]+(PITCH[3]*(EPCW[3]/(32767.5*128.0  ))*((int)MOD[3]-512));
+          envg++;
+        };
+        break;
+      case 4:
+        {
+          tim=0;
+          envg=0;
+          tick=1;
+        };
+        break;
+      }
     }
   }
 }
@@ -353,7 +356,6 @@ void initSynth()
     EFTWS[i]=(1.0/exp(.057762265 * (i - 69.)))/(FS/(32767.5*10.0));//[s];
     PITCHS[i]=(440. * exp(.057762265 * (i - 69.)))/(FS/65535.0);
     // FTWS[voice]=PITCH[voice]+(PITCH[voice]*(EPCW[voice]/(32767.5*128.0  ))*((int)MOD[voice]-512));
-
   }
   TCCR1B=0x02;                                    //-Start audio interrupt
   SET(TIMSK1,OCIE1A);                             // |
@@ -363,8 +365,28 @@ void initSynth()
   TCCR0B=0x01;                                    // |
   OCR0A=127;                                      //-+
   SET(DDRD,OUTPUTPIN);                            //-PWM pin
-
 }
 
+void pauseSynth() {
+  TCCR1B=0x03;                                    //-Start audio interrupt
+  CLR(TIMSK1,OCIE1A);                             //-+
 
+  TCCR0A = 0x03;
+  TCCR0B = 0x03;
+  OCR0A = 0;
+  CLR(DDRD,OUTPUTPIN);
+
+  playing = false;
+}
+
+void unpauseSynth() {
+  TCCR1B=0x02;
+  SET(TIMSK1,OCIE1A);
+
+  TCCR0A=0x83;
+  TCCR0B=0x01;
+  OCR0A=127;
+  SET(DDRD,OUTPUTPIN);
+  playing = true;
+}
 

@@ -1,267 +1,488 @@
+#define GREETING 0
+#define BEGINNING 10
+#define ASK_TO_PLAY 20
+#define INSTRUCTIONS 30
+#define START_GAME 50
 #define GAME 100
 #define YOU_WIN 120
 #define TOO_HIGH 140
 #define TOO_LOW 160
 #define NO_GAME 200
+#define GUESS_DEBOUNCE 50
 
-unsigned long waitTime = 10;
-unsigned long waitUntil = 0;
-unsigned long interval = 0;
+// SPECIAL CHARACTERS
+#define ARROW_UP 24
+#define ARROW_DOWN 25
+#define ARROW_RIGHT 26
+#define ARROW_LEFT 27
+
+unsigned long waitStart = 0;
+unsigned long waitDuration = 0;
+unsigned long localWaitStart = 0;
+unsigned long localWaitDuration = 0;
+unsigned long lastGuessTime = 0;
 int gameStep = 0;
-int scrollXPos = 0;
-int scrollYPos = 0;
-int timeout = 0;
-int targetTime = 0;
 int guessMe = 0;
 int guessCount = 0;
 int theGuess = 0;
+boolean instructions = true;
 
 void resetGames() {
-//  TCCR1B=0x03;
-//  TCCR0B=0x03; 
-  waitUntil = 0;
-  interval = 0;
+  stickClear();
+  pauseSynth();
+  waitStart = 0;
+  waitDuration = 0;
+  localWaitStart = 0;
+  localWaitDuration = 0;
   gameStep = 0;
-  scrollXPos = 0;
-  scrollYPos = 0;
-  timeout = 0;
-  targetTime = 0;
   guessMe = 0;
   guessCount = 0;
   theGuess = 0;
+  instructions = true;
 }
 
 void wait(unsigned long t) {
-  delay(t*32);
+  waitDuration = (t);
+  waitStart = millis();
 }
 
-void gameTimeout(unsigned long count) {
-  timeout = count * 6400;
+void localWait(unsigned long t) {
+  localWaitDuration = (t);
+  localWaitStart = millis();
+}
+
+boolean localReady() {
+  return millis() - localWaitStart >= localWaitDuration;
 }
 
 void game() {
-  wait(25);
-  // get btns
-  updateBtns();
+  // check if we're still waiting
+  if( millis() - waitStart >= waitDuration ) {
 
-  switch(gameStep) {
-    case 0: {
-      // start game mode
-      resetGames();
-      matrix.clear();
-      matrix.blinkRate(0);
-      matrix.setBrightness(8);
-      matrix.drawBitmap(0, 0, smile_bmp, 8, 8, LED_ON);
-      matrix.writeDisplay();
-      gameStep++;
-      // pause for 1/2 sec
-      wait(500);
-      break;
-    }
-    case 1: {
-      // setup animated intro text
-      matrixSetScrollText("Hi, want to play a game?");
-      gameStep++;
-      break;
-    }
-    case 2: {
-      if(matrixScrollText()) {
-        gameStep++;
-      }
-      break;
-    }
-    case 3: {
-      // show wait state
-      matrix.clear();
-      matrix.setCursor(1,0);
-      matrix.print("?");
-      matrix.writeDisplay();
-      matrix.blinkRate(3);
-      // show yes/no buttons as red/green
-      stickClear();
-      stick.setPixelColor(0, stick.Color(0,255,0));
-      stick.setPixelColor(1, stick.Color(0,255,0));
-      stick.setPixelColor(6, stick.Color(255,0,0));
-      stick.setPixelColor(7, stick.Color(255,0,0));
-      stick.show();
-      // set timeout as countdown
-      gameTimeout(5000);
-      gameStep++;
-      break;
-    }
-    case 4: {
-      // check btns
-      if(btns[BIG_L].risingEdge()) {
+    wait(32);
+    /*
+     *  the game sequence is controled by this long switch case
+     *  statement. It's a bit unweildy, but serviceable.
+     */
+    switch(gameStep) {
+
+      /* ---------------------------------------------------------
+       *  GREETING:
+       *    reset values and say hello
+       */
+      case GREETING: {
+        // start game mode
+        resetGames();
+        // clear pixel stick
+        stickClear();
+        // clear matrix and show smile
+        matrix.clear();
         matrix.blinkRate(0);
+        matrix.setBrightness(8);
+        matrix.drawBitmap(0, 0, smile_bmp, 8, 8, LED_ON);
+        matrix.writeDisplay();
+        // advance game sequence one step
+        gameStep++;
+        // pause for 2 sec
+        wait(2000);
+        // each case must end in break;
+        break;
+      }
+      case GREETING+1: {
+        // wink ;)
+        matrix.clear();
+        matrix.drawBitmap(0, 0, wink_bmp, 8, 8, LED_ON);
+        matrix.writeDisplay();
+        // advance game sequence one step
+        gameStep++;
+        // pause for .2 sec
+        wait(200);
+        break;
+      }
+      case GREETING+2: {
+        // smile
+        matrix.clear();
+        matrix.drawBitmap(0, 0, smile_bmp, 8, 8, LED_ON);
+        matrix.writeDisplay();
+        // advance game sequence one step
+        gameStep++;
+        // pause for 1 sec
+        wait(1000);
+        break;
+      }
+      case GREETING+3: {
+        // setup animated welcome text
+        matrixSetScrollText("  Hi!   I'm BeatBot  ");
+        gameStep++;
+        break;
+      }
+
+      case GREETING+4: {
+        if( matrixScrollText() ) {
+          gameStep = BEGINNING;
+        }
+        break;
+      }
+
+      /* ---------------------------------------------------------
+       *  BEGINING
+       *    idle state. smile, blink, wink or go to ask to play.
+       */
+      case BEGINNING: {
+          matrix.clear();
+          matrix.setBrightness(8);
+          matrix.drawBitmap(0, 0, smile_bmp, 8, 8, LED_ON);
+          matrix.writeDisplay();
+          // localWait lets us check for input while paused, where
+          // the wait command prevents input. We use 'localReady'
+          // below to check if we've waited long enough.
+          localWait(random(10,50)*100);
+          gameStep++;
+        break;
+      }
+
+      case BEGINNING+1: {
+        // check if we've waited long enough, or if a button
+        // was pressed
+        if(localReady() || RiseBtns) {
+          // 15% chance of asking to play, or if button pressed
+          if( (random(100) > 85) || RiseBtns ) {
+            gameStep = ASK_TO_PLAY;
+          }
+          // only 5% chance of wink ;)
+          else if(random(100) > 95) {
+            matrix.clear();
+            matrix.drawBitmap(0, 0, wink_bmp, 8, 8, LED_ON);
+            matrix.writeDisplay();
+            wait(400);
+            gameStep = BEGINNING;
+          }
+          // blink
+          else {
+            matrix.clear();
+            matrix.drawBitmap(0, 0, blink_bmp, 8, 8, LED_ON);
+            matrix.writeDisplay();
+            wait(100);
+            gameStep = BEGINNING;
+          }
+        }
+        break;
+      }
+
+      /* ---------------------------------------------------------
+       *  ASK_TO_PLAY
+       *    ask user to play then wait for (and handle) input.
+       */
+      case ASK_TO_PLAY: {
+        matrixSetScrollText("Want to play a game?");
+        gameStep++;
+        break;
+      }
+      case ASK_TO_PLAY+1: {
+        if( matrixScrollText() ) {
+          gameStep++;
+        }
+        break;
+      }
+      case ASK_TO_PLAY+2: {
+        // show wait state
+        matrix.clear();
+        matrix.blinkRate(1); // rate 1 = fast blink
+        matrix.setCursor(1,0); // centers the '?'
+        matrix.print("?");
+        matrix.writeDisplay();
+        // show yes/no buttons as red/green
+        stickClear();
+        stick.setPixelColor(0, stick.Color(0,64,0));
+        stick.setPixelColor(1, stick.Color(0,64,0));
+        stick.setPixelColor(6, stick.Color(64,0,0));
+        stick.setPixelColor(7, stick.Color(64,0,0));
+        stick.show();
+        localWait(4000);
+        gameStep++;
+        break;
+      }
+      case ASK_TO_PLAY+3: {
+        // check btns
+        if(RiseBtns & BIG_L) {
+          matrix.blinkRate(0);
+          matrixClear();
+          stickClear();
+          // only give instructions the 1st time
+          if(instructions) {
+            instructions = false;
+            gameStep = INSTRUCTIONS;
+          }
+          else {
+            matrixSetScrollText("Yay!  ");
+            gameStep++;
+          }
+        }
+        else if (RiseBtns & BIG_R) {
+          stickClear();
+          gameStep = NO_GAME;
+        }
+        else if( localReady() ) {
+          stickClear();
+          gameStep = NO_GAME+4;
+        }
+        break;
+      }
+      case ASK_TO_PLAY+4: {
+        if(matrixScrollText()) {
+          gameStep = GAME;
+        }
+        break;
+      }
+
+      /* ---------------------------------------------------------
+       *  INSTRUCTIONS
+       *    tell user how to play
+       */
+      case INSTRUCTIONS: {
+        matrixSetScrollText("Let's play Number Guess!");
+        gameStep++;
+        break;
+      }
+      case INSTRUCTIONS+1: {
+        if(matrixScrollText()) {
+          matrixSetScrollText("Turn this dial");
+          gameStep++;
+        }
+        break;
+      }
+      case INSTRUCTIONS+2: {
+        if(matrixScrollText()) {
+          // show wait state
+          matrix.clear();
+          matrix.setCursor(1,0);
+          matrix.blinkRate(1);
+          matrix.print((char)ARROW_RIGHT);
+          matrix.writeDisplay();
+          wait(1500);
+          gameStep++;
+        }
+        break;
+      }
+      case INSTRUCTIONS+3: {
+        String temp = "Press " + (String)((char)ARROW_DOWN) + " to choose";
+        matrixSetScrollText(temp);
+        matrix.blinkRate(0);
+        // show ok btn
+        stick.setPixelColor(0, stick.Color(0,64,0));
+        stick.setPixelColor(1, stick.Color(0,64,0));
+        stick.show();
+        gameStep++;
+        break;
+      }
+      case INSTRUCTIONS+4: {
+        if(matrixScrollText()) {
+          gameStep = START_GAME;
+        }
+        break;
+      }
+
+      /* ---------------------------------------------------------
+       *  START_GAME
+       *    clear out game states and update display
+       */
+      case START_GAME: {
+        // set number to guess
+        guessMe = random(1,64);
+        guessCount = 0;
+        // get number from right dial
+        updateDials();
+        theGuess = map(right,0,1023,1,64);
+        matrixSetScrollText((String)theGuess, 1);
+        // show ok btn
+        stick.setPixelColor(0, stick.Color(0,64,0));
+        stick.setPixelColor(1, stick.Color(0,64,0));
+        stick.show();
+        gameStep = GAME;
+        break;
+      }
+
+      /* ---------------------------------------------------------
+       *  GAME
+       *    update dials, update display if needed, handle input
+       */
+      case GAME: {
+        updateDials();
+        if(RiseBtns & BIG_L) {
+          guessCount++;
+          if(theGuess == guessMe) {
+            gameStep = YOU_WIN;
+          }
+          else if(theGuess > guessMe) {
+            gameStep = TOO_HIGH;
+          }
+          else if(theGuess < guessMe) {
+            gameStep = TOO_LOW;
+          }
+        }
+        else if(newRight) {
+          int temp = map(right,0,1023,1,64);
+          if( temp != theGuess ) {
+            theGuess = temp;
+            matrixSetScrollText((String)theGuess, 1);
+          }
+        }
+        matrixScrollText();
+        wait(50);
+        break;
+      }
+      /* ---------------------------------------------------------
+       *  TOO_LOW
+       *    show message and loop back
+       */
+      case TOO_LOW: {
+        matrixSetScrollText("Too low...");
+        gameStep++;
+        break;
+      }
+      case TOO_LOW+1: {
+        if(matrixScrollText()) {
+          gameStep = GAME;
+        }
+        break;
+      }
+      /* ---------------------------------------------------------
+       *  TOO_HIGH
+       *    show message and loop back
+       */
+      case TOO_HIGH: {
+        matrixSetScrollText("Too high...");
+        gameStep++;
+        break;
+      }
+      case TOO_HIGH+1: {
+        if(matrixScrollText()) {
+          gameStep = GAME;
+        }
+        break;
+      }
+      /* ---------------------------------------------------------
+       *  YOU_WIN
+       *    shows win message and how many guesses it took
+       */
+      case YOU_WIN: {
         matrixClear();
         stickClear();
+        matrixSetScrollText("YOU WIN!!  YOU WIN!!  ");
         gameStep++;
+        break;
       }
-      else if (btns[BIG_R].risingEdge()) {
+      case YOU_WIN+1: {
         stickClear();
-        gameStep = NO_GAME;
-      }
-      else if(timeout-- < 0) {
-        stickClear();
-        gameStep = NO_GAME+3;
-      }
-      break;
-    }
-    case 5: {
-      matrixSetScrollText("Yay! Let's play Guess My Number!");
-      // set number to guess
-      guessMe = random(1,64);
-      gameStep++;
-      break;
-    }
-    case 6: {
-      if(matrixScrollText()) {
-        gameStep++;
-      }
-      break;
-    }
-    case 7: {
-      matrixSetScrollText("Pick a number with the right dial.");
-      gameStep++;
-      break;
-    }
-    case 8: {
-      if(matrixScrollText()) {
-        gameStep++;
-      }
-      break;
-    }
-    case 9: {
-      matrixSetScrollText("Press the green button to choose.");
-      gameStep++;
-      break;
-    }
-    case 10: {
-      if(matrixScrollText()) {
-        guessCount = 0;
-        updateDials();
-        theGuess = map(left,0,1023,1,64);
-        matrixSetScrollText((String)theGuess);
-        gameStep = GAME;
-      }
-      break;
-    }
-    case GAME: {
-      // show ok btn
-      stick.setPixelColor(0, stick.Color(0,255,0));
-      stick.setPixelColor(1, stick.Color(0,255,0));
-      stick.show();
-      updateDials();
-      if(btns[BIG_L].risingEdge()) {
-        guessCount++;
-        if(theGuess == guessMe) {
-          gameStep = YOU_WIN;
+        if(matrixScrollText()) {
+          gameStep++;
         }
-        else if(theGuess > guessMe) {
-          gameStep = TOO_HIGH;
-        }
-        else if(theGuess < guessMe) {
-          gameStep = TOO_LOW;
-        }
+        break;
       }
-      else if(newRight) {
-        int temp = map(right,0,1023,1,64);
-        if(temp != theGuess) {
-          theGuess = temp;
-          matrixSetScrollText((String)theGuess);
-        }
-      }
-      matrixScrollText();
-      break;
-    }
-    case TOO_LOW: {
-      matrixSetScrollText("Too low...");
-      gameStep++;
-      break;
-    }
-    case TOO_LOW+1: {
-      if(matrixScrollText()) {
-        gameStep = GAME;
-      }
-      break;
-    }
-    case TOO_HIGH: {
-      matrixSetScrollText("Too high...");
-      gameStep++;
-      break;
-    }
-    case TOO_HIGH+1: {
-      if(matrixScrollText()) {
-        gameStep = GAME;
-      }
-      break;
-    }
-    case YOU_WIN: {
-      matrixSetScrollText("YOU WIN!!  YOU WIN!!");
-      gameStep++;
-      break;
-    }
-    case YOU_WIN+1: {
-      if(matrixScrollText()) {
+      case YOU_WIN+2: {
+        matrixSetScrollText("That was ");
         gameStep++;
+        break;
       }
-      break;
-    }
-    case YOU_WIN+2: {
-      String scoreStr = "It took you ";
-      scoreStr += guessCount;
-      scoreStr += " guesses! ";
-      scoreStr += scoreStr; // play message 2x
-      matrixSetScrollText(scoreStr);
-      gameStep++;
-      break;
-    }
-    case YOU_WIN+3: {
-      if(matrixScrollText()) {
-        gameStep = 0; // start over
+      case YOU_WIN+3: {
+        if(matrixScrollText()) {
+          // show score
+          matrix.clear();
+          matrix.setCursor(1,0);
+          matrix.blinkRate(1);
+          matrix.print(guessCount);
+          matrix.writeDisplay();
+          wait(2000);
+          gameStep++;
+        }
+        break;
       }
-      break;
-    }
-    case NO_GAME: {
-      matrix.clear();
-      matrix.blinkRate(0);
-      matrix.drawBitmap(0, 0, neutral_bmp, 8, 8, LED_ON);
-      matrix.writeDisplay();
-      wait(1000);
-      matrixSetScrollText("awww... I'm sad...");
-      gameStep++;
-      break;
-    }
-    case NO_GAME+1: {
-      if(matrixScrollText()) {
+      case YOU_WIN+4: {
+        matrixSetScrollText("guesses! ");
         gameStep++;
+        break;
       }
-      break;
-    }
-    case NO_GAME+2: {
-      matrix.clear();
-      matrix.blinkRate(3);
-      matrix.drawBitmap(0, 0, frown_bmp, 8, 8, LED_ON);
-      matrix.writeDisplay();
-      wait(2000);
-      gameStep++;
-      break;
-    }
-    case NO_GAME+3: {
-      matrix.clear();
-      matrix.blinkRate(0);
-      matrix.drawBitmap(0, 0, neutral_bmp, 8, 8, LED_ON);
-      matrix.writeDisplay();
-      wait(1000);
-      gameStep++;
-      break;
-    }
-    default: {
-      if(matrixScrollText()) {
-        gameStep = 0; // start over
+      case YOU_WIN+5: {
+        if(matrixScrollText()) {
+          matrix.clear();
+          matrix.drawBitmap(0, 0, smile_bmp, 8, 8, LED_ON);
+          matrix.writeDisplay();
+          wait(1500);
+          gameStep++;
+        }
+        break;
       }
-      break;
+      case YOU_WIN+6: {
+        matrixSetScrollText("Play again?");
+        gameStep++;
+        break;
+      }
+      case YOU_WIN+7: {
+        if(matrixScrollText()) {
+          gameStep = ASK_TO_PLAY+2;
+        }
+        break;
+      }
+      /* ---------------------------------------------------------
+       *  NO_GAME
+       *    shows sad face
+       */
+      case NO_GAME: {
+        matrix.clear();
+        matrix.blinkRate(0);
+        matrix.setBrightness(1);
+        matrix.drawBitmap(0, 0, frown_bmp, 8, 8, LED_ON);
+        matrix.writeDisplay();
+        wait(1000);
+        gameStep++;
+        break;
+      }
+      case NO_GAME+1: {
+        matrixSetScrollText("awww... I'm sad...");
+        gameStep++;
+        break;
+      }
+      case NO_GAME+2: {
+        if(matrixScrollText()) {
+          gameStep++;
+        }
+        break;
+      }
+      case NO_GAME+3: {
+        matrix.clear();
+        matrix.blinkRate(0);
+        matrix.setBrightness(2);
+        matrix.drawBitmap(0, 0, frown_bmp, 8, 8, LED_ON);
+        matrix.writeDisplay();
+        wait(5000);
+        tone(6,16,100);
+        delay(100);
+        gameStep++;
+        break;
+      }
+      case NO_GAME+4: {
+        matrix.clear();
+        matrix.setBrightness(4);
+        matrix.blinkRate(0);
+        matrix.drawBitmap(0, 0, neutral_bmp, 8, 8, LED_ON);
+        matrix.writeDisplay();
+        wait(4000);
+        gameStep = BEGINNING;
+        break;
+      }
+
+      /* ---------------------------------------------------------
+       *  default
+       *    if we get lost, restart
+       */
+      default: {
+        if(matrixScrollText()) {
+          gameStep = GREETING; // start over
+        }
+        break;
+      }
     }
+    clearBtnStates();
   }
 }
 

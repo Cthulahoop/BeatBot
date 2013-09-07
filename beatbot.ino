@@ -1,15 +1,17 @@
 /* ********************************************************
- *     ___           __  ___       __    ____ __  __  __ 
+ *     ___           __  ___       __    ____ __  __  __
  *    / _ )___ ___ _/ /_/ _ )___  / /_  / __//  \/  \/  \
  *   / _ </ -_) _ `/ __/ _ </ _ \/ __/ / _ \/ / / / / / /
  *  /____/\__/\_,_/\__/____/\___/\__/  \___/\__/\__/\__/
  *
- *  v 1.2 08.2013 by Ric Ewing
+ *  v 1.3 08.2013 by Ric Ewing
  *  for the MakerHaus Arduino for Kids class
  *
- *    Inspired and based on work by:
+ *    Based on and inspired by:
  *    - Simple AVR wavetable synthesizer V1.0 by DZL
  *      https://github.com/Illutron/ArduinoSynth
+ *      Thank you to DZL for permission to use and
+ *      distribute.
  *
  *    - Noise Machine Instructables Mads Høbye
  •      http://www.instructables.com/member/madshobye
@@ -33,18 +35,20 @@ Adafruit_8x8matrix matrix = Adafruit_8x8matrix();
 #include "games.h"
 #include "sequencer.h"
 
-byte mode = 0;
-int modeSwitch = B10010000;
+byte mode = 1;
 
 void setup() {
+
   Serial.begin(9600);
 
-  initSynth();
+  // setup
   initBtns();
   initLeds();
+  initSynth();
   initSequencer();
-  
+
   // this makes random more ... random. :)
+  // see: http://arduino.cc/en/Reference/RandomSeed
   randomSeed(analogRead(A0));
 }
 
@@ -54,7 +58,32 @@ void setup() {
 //************************************************
 
 void loop() {
-    
+
+  updateBtns();
+
+  if(FallBtns&SM_L || FallBtns&SM_R) {
+    // check for '>' and 'x' buttons being
+    // pressed at the same time
+    if(BtnStates == SM_L+SM_R) {
+      // reset modules
+      stickClear();
+      matrixClear();
+      startSeq();
+      resetGames();
+      clearBtnStates();
+      updateBtns();
+      //switch mode
+      mode++;
+      mode %= 2;
+      if(mode == 0) {
+        unpauseSynth();
+      }
+      else {
+        pauseSynth();
+      }
+    }
+  }
+
   switch(mode) {
     case 0: {
       sequencer();
@@ -66,24 +95,7 @@ void loop() {
     }
   }
 
-  if(btns[SM_L].read()==LOW) {
-    Serial.println(btns[SM_L].duration());
-  }
-   
-   
-  if(btns[SM_L].fallingEdge() || btns[SM_R].fallingEdge()) { 
-    if(BtnStates == modeSwitch) {
-      stickClear();
-      matrixClear();
-      startSeq();
-      resetGames();
-      initSynth();
-      //switch mode
-      mode++;
-      mode %= 2;
-      Serial.println(mode);
-    }
-  }
+
 }
 
 

@@ -1,3 +1,14 @@
+// TODO:  Examine using smoothing or remapping values 
+//        to reudce the jumpyness of the dial inputs.
+//
+//        Or try low pass filtering where:
+//        new_value=A*old_value+B*new_value
+//        where A+B=1, and the smaller the B (ie. 0.2) 
+//        the bigger the filtering effect.
+//
+//        Or, explore adding a 0.1µ capacitor between
+//        the read pin and ground.
+
 #define LEFT_DIAL A2
 #define RIGHT_DIAL A3
 
