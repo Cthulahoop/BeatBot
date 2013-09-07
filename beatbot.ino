@@ -62,7 +62,7 @@ void loop() {
   updateBtns();
 
   if(FallBtns&SM_L || FallBtns&SM_R) {
-    // check for '>' and 'x' buttons being
+    // check for > and x buttons being
     // pressed at the same time
     if(BtnStates == SM_L+SM_R) {
       // reset modules

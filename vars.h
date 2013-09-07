@@ -14,7 +14,7 @@ byte pattern[4][32]= {
 
 byte bar;
 boolean paused = false;
-
+String messageTxt = "";
 
 // store frequency values for 8 octives of musical notes
 PROGMEM byte notes[] = {

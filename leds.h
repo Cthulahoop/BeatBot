@@ -1,4 +1,3 @@
-String scrollTxt = "";
 int scrollPos = 0;
 int endScrollPos = 0;
 
@@ -44,11 +43,12 @@ void matrixReset() {
   matrix.writeDisplay();
 }
 
-void matrixSetScrollText(String str, int pos = 9) {
-  scrollTxt = str;
+void matrixResetScrollText(int pos = 9) {
   scrollPos = pos;
   matrix.blinkRate(0);
-  endScrollPos = scrollTxt.length() * -6;
+  endScrollPos = messageTxt.length() * -6;
+  Serial.print("+ ");
+  Serial.println(messageTxt);
 }
 
 boolean matrixScrollText() {
@@ -56,7 +56,7 @@ boolean matrixScrollText() {
   scrollPos--;
   if(scrollPos > endScrollPos) {
     matrix.setCursor(scrollPos,0);
-    matrix.print(scrollTxt);
+    matrix.print(messageTxt);
     matrix.writeDisplay();
     return false; // are we done scrolling?
   }

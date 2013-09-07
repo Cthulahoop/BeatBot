@@ -49,7 +49,7 @@ unsigned char currentVoice = 1;
 int tempo = 30;                   //-Tempo for the playback
 boolean playing = true;
 
-int OUTPUTPIN = 6;
+int static OUTPUTPIN = 6;
 volatile unsigned int PCW[4]={
   0,0,0,0};			                  //-Wave phase accumolators
 volatile unsigned int FTW[4]={
