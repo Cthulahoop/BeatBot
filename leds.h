@@ -43,12 +43,17 @@ void matrixReset() {
   matrix.writeDisplay();
 }
 
-void matrixResetScrollText(int pos = 9) {
-  scrollPos = pos;
+void matrixSetScrollPos(int n) {
+  scrollPos = n;
+}
+
+// String matrixSetMessage(char* m) {
+String matrixSetMessage(String m) {
+  messageTxt = (String)(m);
+  scrollPos = 9;
   matrix.blinkRate(0);
   endScrollPos = messageTxt.length() * -6;
-  Serial.print("+ ");
-  Serial.println(messageTxt);
+  return messageTxt;
 }
 
 boolean matrixScrollText() {

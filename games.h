@@ -112,13 +112,14 @@ void game() {
       }
       case GREETING+3: {
         // setup animated welcome text
-        messageTxt = "Hi!   I'm BeatBot  ";
-        matrixResetScrollText();
+        matrixSetMessage("Hi!  I'm BeatBot ");
         gameStep++;
         break;
       }
 
       case GREETING+4: {
+        // the matrixScrollText method returns true if the text
+        // has scrolled off screen to the left
         if( matrixScrollText() ) {
           gameStep = BEGINNING;
         }
@@ -175,8 +176,7 @@ void game() {
        *    ask user to play then wait for (and handle) input.
        */
       case ASK_TO_PLAY: {
-        messageTxt = "Want to play a game?";
-        matrixResetScrollText();
+        matrixSetMessage("Want to play a game?");
         gameStep++;
         break;
       }
@@ -216,8 +216,7 @@ void game() {
             gameStep = INSTRUCTIONS;
           }
           else {
-            messageTxt = "Yay!  ";
-            matrixResetScrollText();
+            matrixSetMessage("Yay!  ");
             gameStep++;
           }
         }
@@ -243,15 +242,13 @@ void game() {
        *    tell user how to play
        */
       case INSTRUCTIONS: {
-        messageTxt = "Let's play guess my number!";
-        matrixResetScrollText();
+        matrixSetMessage("Let's play guess my number!");
         gameStep++;
         break;
       }
       case INSTRUCTIONS+1: {
         if(matrixScrollText()) {
-          messageTxt = "Turn this dial";
-          matrixResetScrollText();
+          matrixSetMessage("Turn this dial");
           gameStep++;
         }
         break;
@@ -270,8 +267,8 @@ void game() {
         break;
       }
       case INSTRUCTIONS+3: {
-        messageTxt = "Press " + String((char)ARROW_DOWN) + " to choose";
-        matrixResetScrollText();
+        String msg = "Press " + String((char)ARROW_DOWN) + " to choose";
+        matrixSetMessage(msg);
         matrix.blinkRate(0);
         // show ok btn
         stick.setPixelColor(0, stick.Color(0,64,0));
@@ -298,8 +295,8 @@ void game() {
         // get number from right dial
         updateDials();
         theGuess = map(right,0,1023,1,64);
-        messageTxt = (String)theGuess;
-        matrixResetScrollText(1);
+        // we have to convert int to a char array
+        matrixSetMessage((String)theGuess);
         // show ok btn
         stick.setPixelColor(0, stick.Color(0,64,0));
         stick.setPixelColor(1, stick.Color(0,64,0));
@@ -330,12 +327,12 @@ void game() {
           int temp = map(right,0,1023,1,64);
           if( temp != theGuess ) {
             theGuess = temp;
-            messageTxt= (String)theGuess;
-            matrixResetScrollText(1);
+            char tmp[3];
+            matrixSetMessage((String)theGuess);
+            matrixSetScrollPos(1);
           }
         }
         matrixScrollText();
-        wait(50);
         break;
       }
       /* ---------------------------------------------------------
@@ -343,8 +340,7 @@ void game() {
        *    show message and loop back
        */
       case TOO_LOW: {
-        messageTxt= "Too low...";
-        matrixResetScrollText();
+        matrixSetMessage("Too low...");
         gameStep++;
         break;
       }
@@ -359,8 +355,7 @@ void game() {
        *    show message and loop back
        */
       case TOO_HIGH: {
-        messageTxt = "Too high...";
-        matrixResetScrollText();
+        matrixSetMessage("Too high...");
         gameStep++;
         break;
       }
@@ -377,8 +372,7 @@ void game() {
       case YOU_WIN: {
         matrixClear();
         stickClear();
-        messageTxt = "YOU WIN!!  YOU WIN!!  ";
-        matrixResetScrollText();
+        matrixSetMessage("YOU WIN!!  YOU WIN!!  ");
         gameStep++;
         break;
       }
@@ -390,8 +384,7 @@ void game() {
         break;
       }
       case YOU_WIN+2: {
-        messageTxt = "That was ";
-        matrixResetScrollText();
+        matrixSetMessage("That was ");
         gameStep++;
         break;
       }
@@ -409,8 +402,7 @@ void game() {
         break;
       }
       case YOU_WIN+4: {
-        messageTxt = "guesses! ";
-        matrixResetScrollText();
+        matrixSetMessage("guesses! ");
         gameStep++;
         break;
       }
@@ -425,8 +417,7 @@ void game() {
         break;
       }
       case YOU_WIN+6: {
-        messageTxt = "Play again?";
-        matrixResetScrollText();
+        matrixSetMessage("Play again?");
         gameStep++;
         break;
       }
@@ -451,8 +442,7 @@ void game() {
         break;
       }
       case NO_GAME+1: {
-        messageTxt = "awww... I'm sad...";
-        matrixResetScrollText();
+        matrixSetMessage("awww... I'm sad...");
         gameStep++;
         break;
       }
