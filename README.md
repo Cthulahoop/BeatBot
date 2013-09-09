@@ -1,9 +1,11 @@
 BeatBot
 =======
 
-BeatBot is an Arduino based project created by Ric Ewing for the MakerHaus Arduino for Kids class. This was a combined hardware and software class aimed at kids age 12+ to build a handheld lo-fi synthesizer/sequencer and virtual pet. 
+BeatBot is an Arduino based project created by Ric Ewing for the MakerHaus Arduino for Kids class. This was a combined hardware and software class aimed at kids age 12+ to build a handheld lo-fi synthesizer/sequencer and virtual pet.
 
-Components
+In addition to the BeatBot sketch there is also the 'bot_test' sketch which can be used as a diagnostic tool for the physical project build.
+
+Hardware Components
 ----------
 I sourced the components for this project primarily from Adafruit, Jameco and Alphatronix. The following components were used:
 
