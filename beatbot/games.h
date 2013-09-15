@@ -232,7 +232,7 @@ void game() {
       }
       case ASK_TO_PLAY+4: {
         if(matrixScrollText()) {
-          gameStep = GAME;
+          gameStep = START_GAME;
         }
         break;
       }
@@ -459,8 +459,12 @@ void game() {
         matrix.drawBitmap(0, 0, frown_bmp, 8, 8, LED_ON);
         matrix.writeDisplay();
         wait(5000);
-        tone(6,16,100);
-        delay(100);
+        for(int ppp = 0; ppp < 20; ppp++) {
+          tone(6,32);
+          // delay(1);
+          noTone(6);
+          delay(15);
+        }
         gameStep++;
         break;
       }
