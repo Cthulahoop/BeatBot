@@ -12,6 +12,10 @@
  *   Modified by Ric Ewing for the MakerHaus BeatBot 6000 project.
  *   Thanks to DZL for permission to use and distribute.
  *
+ *   v.1.6  14.09.2013
+ *    - moved vars to vars.h
+ *    - renamed setup_length to more accurate setup_decay
+ *    - fixed bug in setup_env
  *   v.1.5  20.08.2013
  *    - added tempo change
  *   v.1.4  18.08.2013
@@ -40,38 +44,6 @@
 #define CHK(x,y) (x & (1<<y))      // |
 #define TOG(x,y) (x^=(1<<y))       //-+
 
-
-//*********************************************************************
-// vars
-//*********************************************************************
-
-unsigned char currentVoice = 1;
-int tempo = 30;                   //-Tempo for the playback
-boolean playing = true;
-
-int static OUTPUTPIN = 6;
-volatile unsigned int PCW[4]={
-  0,0,0,0};			                  //-Wave phase accumolators
-volatile unsigned int FTW[4]={
-  1000,200,300,400};              //-Wave frequency tuning words
-volatile unsigned char AMP[4]={
-  255,255,255,255};               //-Wave amplitudes [0-255]
-volatile unsigned int PITCH[4]={
-  500,500,500,500};               //-Voice pitch
-volatile int MOD[4]={
-  20,0,64,127};                   //-Voice envelope modulation [0-1023 512=no mod. <512 pitch down >512 pitch up]
-volatile unsigned int wavs[4];    //-Wave table selector [address of wave in memory]
-volatile unsigned int envs[4];    //-Envelopte selector [address of envelope in memory]
-volatile unsigned int EPCW[4]={
-  0x8000,0x8000,0x8000,0x8000};   //-Envelope phase accumolator
-volatile unsigned int EFTW[4]={
-  10,10,10,10};                   //-Envelope speed tuning word
-volatile unsigned int tim=0;      //-Sample counter eg. for sequencer
-volatile unsigned int tim2=0;     //-Sample counter eg. for sequencer
-
-volatile unsigned char divider=4; //-Sample rate decimator for envelope
-volatile unsigned char tick=0;
-volatile unsigned char envg=0;
 
 unsigned char synthTick(void)
 {
@@ -251,7 +223,7 @@ void setup_wave(unsigned char voice,unsigned char wave)
 
 void setup_env(unsigned char voice,unsigned char env)
 {
-  switch(env/16)
+  switch(env)
   {
   case 1:
     envs[voice]=(unsigned int)Env0;
@@ -278,7 +250,7 @@ unsigned int EFTWS[128];
 //  Setup Length
 //*********************************************************************
 
-void setup_length(unsigned char voice,unsigned char length)
+void setup_decay(unsigned char voice,unsigned char length)
 {
 
 //  EFTW[voice]=EFTWS[length];
